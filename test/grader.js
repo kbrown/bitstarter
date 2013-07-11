@@ -25,16 +25,17 @@ var fs = require('fs');
 var program = require('commander');
 var cheerio = require('cheerio');
 var rest = require('restler');
+var sync = require('synchronize');
 
 var HTMLFILE_DEFAULT = "index.html";
 var CHECKSFILE_DEFAULT = "checks.json";
 
 var assertFileExists = function(infile) {
     var instr = infile.toString();
-    if(!fs.existsSync(instr)) {
-        console.log("%s does not exist. Exiting.", instr);
-        process.exit(1); // http://nodejs.org/api/process.html#process_process_exit_code
-    }
+   // if(!fs.existsSync(instr)) {
+    //    console.log("%s does not exist. Exiting.", instr);
+    //    process.exit(1); // http://nodejs.org/api/process.html#process_process_exit_code
+   // }
     return instr;
 };
 
@@ -43,16 +44,21 @@ var cheerioHtmlFile = function(htmlfile) {
 };
 
 var cheerioUrl = function(url) {
-    //http://alexeypetrushin.github.io/synchronize/docs/index.html
-  return cheerio.load(fs.readFileSync(htmlfile));
+	//TODO:
+  //http://alexeypetrushin.github.io/synchronize/docs/index.html
+  //return cheerio.load(sync(rest.get(url)));
+
+
+
+
 }
 
 var loadChecks = function(checksfile) {
     return JSON.parse(fs.readFileSync(checksfile));
 };
 
-var checkHtmlFile = function(htmlfile, checksfile) {
-    $ = cheerioHtmlFile(htmlfile);
+var checkHtmlBytes = function(htmlCherios, checksfile) {
+    $ = htmlCherios; //cheerioHtmlFile(htmlfile);
     var checks = loadChecks(checksfile).sort();
     var out = {};
     for(var ii in checks) {
@@ -61,6 +67,27 @@ var checkHtmlFile = function(htmlfile, checksfile) {
     }
     return out;
 };
+
+
+var checkHtmlUrl = function(url, checksfile) {
+  
+    console.log("checkHtmlUrl");
+	rest.get(url).on('complete', function(result) {
+  		if (result instanceof Error) {
+    		sys.puts('Error: ' + result.message);
+  		} else {
+			var foo = cheerio.load(result);
+    		var checkJson = checkHtmlBytes(foo, program.checks);
+		    var outJson = JSON.stringify(checkJson, null, 4);		
+  		}
+	});
+	
+};
+
+//./grader.js --url http://pacific-fjord-6934.herokuapp.com/index.html
+//program url http://pacific-fjord-6934.herokuapp.com/index.html
+
+
 
 var clone = function(fn) {
     // Workaround for commander.js issue.
@@ -71,12 +98,19 @@ var clone = function(fn) {
 if(require.main == module) {
     program
         .option('-f, --file <html_file>', 'Path to index.html', clone(assertFileExists), HTMLFILE_DEFAULT)
-	.option('-u, --url <url>', 'Url of index.html', clone(assertFileExists), HTMLFILE_DEFAULT)       
+    	.option('-u, --url <url>', 'Url of index.html', clone(assertFileExists), "")       
         .option('-c, --checks <check_file>', 'Path to checks.json', clone(assertFileExists), CHECKSFILE_DEFAULT)
         .parse(process.argv);
-    var checkJson = checkHtmlFile(program.file, program.checks);
-    var outJson = JSON.stringify(checkJson, null, 4);
-    console.log(outJson);
+    console.log("program url", program.url);
+    if ("" == program.url) {
+ 	    var htmlBytes = cheerioHtmlFile(program.file);
+    	var checkJson = checkHtmlBytes(htmlBytes, program.checks);
+    	var outJson = JSON.stringify(checkJson, null, 4);
+    	console.log(outJson);
+    } else {
+		checkHtmlUrl(program.url, program.checks);
+	}
+		
 } else {
     exports.checkHtmlFile = checkHtmlFile;
 }
