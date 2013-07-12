@@ -71,14 +71,16 @@ var checkHtmlBytes = function(htmlCherios, checksfile) {
 
 var checkHtmlUrl = function(url, checksfile) {
   
-    console.log("checkHtmlUrl");
+    //console.log("checkHtmlUrl");
 	rest.get(url).on('complete', function(result) {
   		if (result instanceof Error) {
-    		sys.puts('Error: ' + result.message);
+    		console.log('Error: ' + result.message);
   		} else {
-			var foo = cheerio.load(result);
+//		console.log("result",result);
+         	var foo = cheerio.load(result);
     		var checkJson = checkHtmlBytes(foo, program.checks);
 		    var outJson = JSON.stringify(checkJson, null, 4);		
+                console.log(outJson);
   		}
 	});
 	
@@ -101,7 +103,7 @@ if(require.main == module) {
     	.option('-u, --url <url>', 'Url of index.html', clone(assertFileExists), "")       
         .option('-c, --checks <check_file>', 'Path to checks.json', clone(assertFileExists), CHECKSFILE_DEFAULT)
         .parse(process.argv);
-    console.log("program url", program.url);
+//    console.log("program url", program.url);
     if ("" == program.url) {
  	    var htmlBytes = cheerioHtmlFile(program.file);
     	var checkJson = checkHtmlBytes(htmlBytes, program.checks);
